@@ -1,0 +1,4 @@
+options {
+	directory 	"/var/named";
+	forwarders { 172.121.0.100 }
+};
