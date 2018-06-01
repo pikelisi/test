@@ -1,0 +1,13 @@
+1.fdisk mkfs fstab vg卷组  lv逻辑卷 
+
+2.Shell /dev/null 变量 检查文件状态 字符串比对 if for
+
+3.防火墙 部分端口号 永久(permanent) 添加源IP的规则设置 实现本机的端口映射 聚合连接team 虚拟网卡team 
+
+4.Samba multiuser机制  配置NFS共享 PATH SELinux策略
+
+5.iSCSI 数据库服务基础  数据库的授权
+
+6.HTTP 虚拟Web主机搭建方式(3) 网页内容访问 自定Web根目录 部署动态网站 非默认端口的开放
+
+7.安全Web parted 交换空间 postfix

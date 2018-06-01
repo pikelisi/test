@@ -1,0 +1,311 @@
+watch -n 数值  命令   --->  每多少秒执行一次什么命令
+1.搭建,升级Nginx服务器 登陆网页用户认证 SSL虚拟主机
+2.部署LNMP环境 地址重写(a.html->b.html) 错误日志
+3.Nginx反向代理 Nginx的TCP/UDP调度器 优化Linux(并行，连接长度，查看状态，报错页面，压缩，缓存)
+4.构建memcached服务 PHP实现session共享
+
+
+*******************************************************************************************************************
+
+
+1.搭建Nginx服务
+	[root@proxy ~]# yum -y install gcc pcre-devel openssl-devel 
+					mariadb-server mariadb mariadb-devel
+					php php-mysql php-fpm(源码) httpd-tools
+	[root@proxy nginx-1.10.3]# ./configure   \
+	> --prefix=/usr/local/nginx   \                //指定安装路径
+	> --user=nginx   \                            //指定用户
+	> --group=nginx  \                            //指定组
+	> --with-http_ssl_module                        //开启SSL加密功能
+	[root@proxy nginx-1.10.3]# make && make install    //编译并安装
+
+升级Nginx服务器 
+解压编译
+	[root@proxy nginx-1.12.2]# mv /usr/local/nginx/sbin/nginx  \
+	>/usr/local/nginx/sbin/nginxold
+	[root@proxy nginx-1.12.2]# cp objs/nginx  /usr/local/nginx/sbin/         //拷贝新版本
+	[root@proxy nginx-1.12.2]# make upgrade     
+
+登陆网页用户认证 基于域名的虚拟主机
+程序program   进程process(一个进程用一块内存)     线程thread(共用一块内存)
+
+
+用户认证
+	server {
+		listen       80;
+		server_name  localhost;
+		auth_basic "Input Password:";                        //认证提示符
+		auth_basic_user_file "/usr/local/nginx/pass";        //认证密码文件
+
+生成密码文件，创建用户及密码
+	[root@proxy ~]# htpasswd -c /usr/local/nginx/pass   tom        //创建密码文件
+
+基于域名的虚拟主机
+	server {
+		listen       80;                                      //端口
+		server_name  www.a.com;             <--                //域名
+
+SSL虚拟主机
+设置加密网站的虚拟主机
+	server {
+		   ....
+		ssl_certificate      cert.pem;         #这里是证书文件
+		ssl_certificate_key  cert.key;         #这里是私钥文件
+
+	[root@proxy ~]# openssl genrsa > cert.key                            //生成私钥
+	[root@proxy ~]# openssl req -new -x509 -key cert.key > cert.pem      //生成证书
+
+
+*******************************************************************************************************************
+
+
+2.部署LNMP环境 构建LNMP平台 php-fpm 修改Nginx配置文件
+nginx动静分离 include->fastcgi.conf 删除fastcgi_param 
+修改Nginx配置
+	location / {
+		    root   html;
+		    index  index.php  index.html   index.htm;
+	location  ~  \.php$  {
+		    root           html;
+		    fastcgi_pass   127.0.0.1:9000;    #将请求转发给本机9000端口，PHP解释器
+		    fastcgi_index  index.php;
+		    #fastcgi_param   SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+		    include        fastcgi.conf;
+		}
+
+地址重写
+	[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+	location / {
+	    root   html;
+	index  index.html index.htm;
+	rewrite /a.html  /b.html  (r/p); <--- 地址重写 
+	}
+	redirect 临时重定向
+	permament 永久重定向
+
+	redirect 访问a.html重定向到b.html
+	#charset koi8-r;   网页编码
+
+整个域名转跳
+	server {
+		listen       80;
+		server_name  localhost;
+	rewrite ^/(.*)$  http://www.tmooc.cn/$1;         <---
+
+
+实现curl和火狐访问相同链接返回的页面不同
+	location / {
+	      .....
+	}
+	#这里，~符号代表正则匹配，*符号代表不区分大小写
+	if ($http_user_agent ~* firefox) {            //识别客户端firefox浏览器
+	rewrite ^(.*)$ /firefox/$1;
+	}
+
+ 错误日志
+	 ls /usr/local/nginx/logs/error.log
+	 ls /var/log/php-fpm/www-error.log
+	include 调用其他配置
+
+
+
+*******************************************************************************************************************
+
+
+3.Nginx反向代理
+
+定义集群(可定义多个)
+	http {
+		.....
+		upstream webs {                       <--
+		        server 192.168.2.100:80;    <--
+		        server 192.168.2.200:80;    <--
+		}                                                <--
+
+	通过proxy_pass将用户的请求转发给webs集群
+		    location / {
+		    proxy_pass http://webs;
+		}
+
+配置upstream服务器集群池属性
+设置失败次数，超时时间，权重
+	upstream webs {
+		        server 192.168.2.100 weight=1 max_fails=1 fail_timeout=30;
+		        server 192.168.2.200 weight=2 max_fails=2 fail_timeout=30;
+		        server 192.168.2.101 down;
+		}
+	#weight设置服务器权重值(浏览几次)，默认值为1
+	#max_fails设置(连接)最大失败次数
+	#fail_timeout设置失败超时时间(多久不会连接)，单位为秒
+	#down标记服务器已关机，不参与集群调度
+
+nginx[调度器]
+	upstream webs {
+		ip_hash;      <---#通过ip_hash设置调度规则为：相同客户端访问相同服务器
+		....
+	}
+
+
+Nginx的TCP/UDP调度器------------with-stream (模块)
+官网可以找到
+！！！！！！！！！！！！！！！！！！写在HTTP上面！！！！！！！！！！！！！！！！！
+	stream {                                           
+		       upstream backend {			  //定义集群
+		       server 192.168.2.100:22;            //后端SSH服务器的IP和端口
+		       server 192.168.2.200:22;
+	}
+		    server {
+		        listen 12345;                     //Nginx监听的端口
+		        proxy_connect_timeout 1s;         //连接超时
+		        proxy_timeout 3s;			//连接后多久不操作断开
+		         proxy_pass backend;
+		     }
+	}
+
+
+Nginx常见问题处理
+
+修改配置文件，增加并发量
+	[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+查看CPU核数      :      [root@proxy nginx]# cat /proc/cpuinfo | grep process
+起多少程序   （最多更改为和CPU 核数一致
+	worker_processes  1;
+并发量可改高 （如65535 
+    worker_connections  1024;
+
+优化Linux内核参数（最大文件数量）
+	[root@proxy ~]# ulimit -a                        //查看所有属性值
+	[root@proxy ~]# ulimit -Hn 100000                //设置硬限制（临时规则）
+	[root@proxy ~]# ulimit -Sn 100000                //设置软限制（临时规则）
+永久：
+	[root@proxy ~]# vim /etc/security/limits.conf
+	    .. ..
+	*               soft    nofile            100000
+	*               hard    nofile            100000
+
+	414 Request-URI Too Large(报错：缓存太小)
+	http {
+	client_header_buffer_size    1k;        //默认请求包头信息的缓存    
+	large_client_header_buffers  4 4k;        //大请求包头部信息的缓存个数与容量
+
+浏览器本地缓存静态数据
+定义对静态页面的缓存时间
+	location ~* \.(jpg|jpeg|gif|png|css|js|ico|xml)$ {
+	expires        30d;            //定义客户端缓存时间为30天
+	}
+
+自定义的40x.html页面
+	error_page   404  /404.html;    //自定义错误页面
+
+http状态码
+	401	用户名或密码错误
+	403	禁止访问
+	404	文件不存在
+	414	请求URI头部过长
+	500	服务器内部错误
+	502	Bad Gateway
+
+查看服务器状态信息---------with-http_stub_status_module(模块)
+	location /status {
+		        stub_status on;
+		}
+	[root@proxy ~]# curl  http://192.168.4.5/status
+	Active connections: 1 
+	server accepts  handled   requests
+		10               10          3 
+	Reading: 0 Writing: 1 Waiting: 0
+
+Active connections：当前活动的连接数量。
+Accepts：已经接受客户端的连接总数量。
+Handled：已经处理客户端的连接总数量（一般与accepts一致，除非服务器限制了连接数量）。
+Requests：客户端发送的请求数量。
+Reading：当前服务器正在读取客户端请求头的数量。
+Writing：当前服务器正在写响应信息的数量。
+Waiting：当前多少客户端在等待服务器的响应。
+
+页面压缩处理
+http {
+.. ..
+gzip on;                            //开启压缩
+gzip_min_length 1000;                //小文件不压缩
+gzip_comp_level 4;                //压缩比率
+gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;              //对特定文件压缩，类型参考mime.types
+
+服务器内存缓存
+http { 
+open_file_cache          max=2000  inactive=20s;  //设置服务器最大缓存2000个文件句柄，关闭20秒内无请求的文件句柄
+        open_file_cache_valid    60s;            //文件句柄的有效时间是60秒，60秒后过期
+        open_file_cache_min_uses 5;             //只有访问次数超过5次会被缓存
+        open_file_cache_errors   off;
+} 
+
+
+*******************************************************************************************************************
+
+4.构建memcached服务
+	[root@proxy ~]# yum -y  install   memcached
+	[root@proxy ~]# netstat  -anptu  |  grep memcached
+	使用telnet访问memcached服务器
+	[root@proxy ~]# yum -y install telnet
+	[root@proxy ~]# telnet  192.168.4.5  11211
+.......
+##提示：0表示不压缩，180为数据缓存时间，3为需要存储的数据字节数量。
+add myname 0 180 10            //新建，myname不存在则添加，存在则报错
+set myname 0 180 10            //添加或替换变量
+replace myname 0 180 10        //替换，如果myname不存在则报错
+get myname                    //读取变量
+append myname 0 180 10        //向变量中追加数据
+delete myname                    //删除变量
+stats                        //查看状态
+flush_all                        //清空所有
+quit    
+
+**
+LNMP读取memcached数据库需要php-pecl-memcache.x86_64扩展包，可在 yum list | grep memcache中查询到
+**
+                           11211为memcache端口 
+PHP实现session共享
+	[root@web1 ~]# vim  /etc/php-fpm.d/www.conf            //修改该配置文件的两个参数
+//文件的最后2行
+php_value[session.save_handler] = files  --->>>  memcache 
+                                            //定义Session信息存储在公共的memcached服务器上，主机参数中为memcache（没有d）
+php_value[session.save_path] = /var/lib/php/session --->>> "tcp://192.168.2.5:11211" 
+                                                             //通过path参数定义公共的memcached服务器在哪（服务器的IP和端口）
+[root@web1 ~]# systemctl  restart  php-fpm
+web2同上
+
+
+*******************************************************************************************************************
+
+
+5.安装部署Tomcat服务器
+tmocat不用安装，直接解压复制可用(需要jdk解释器)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

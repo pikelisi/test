@@ -1,0 +1,13 @@
+1.配置电脑ip  
+
+2.pwd ls cd mkdir touch less head、tail  列出内核版本 列出CPU处理器信息 检查内存大小、空闲情况
+
+3.快捷键 mount 通配符 别名 mv rm cp 强制覆盖 vim
+
+4.ssh rpm Yum wget 配置永久IP 
+
+5.用户管理 管道 重定向 设置登录密码 管理组账号 tar备份与恢复 NTP时间同步  date
+
+6.chmod chown GID ACL权限 使用LDAP认证 连接NFS共享
+
+7.UID grep find cron计划任务

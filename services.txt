@@ -1,0 +1,10 @@
+1.
+
+2.搭建DNS服务 搭建多区域的DNS 泛域名解析 有规律的泛域名解析 解析记录的别名 DNS子域授权 dig 解析过程(递归 迭代) 缓存DNS
+ 递归默认开启
+
+3.DNS分离解析 DNSacl地址列表 RAID磁盘管理  进程管理 查看进程树 ps 进程动态排名 检索进程 控制进程(查杀) 日志管理(tailf.awk、sed)
+
+4.DNS分离解析综合实验 使用journalctl工具 DHCP概述及原理 PXE
+ 
+5.rsync同步服务 rsync+SSH远程同步  实时的远程同步 取消用户名密码的验证 死循环脚本 cobbler
