@@ -1,0 +1,471 @@
+***********************************************************************************************************
+DBAday01
+一搭建数据库服务器
+二数据库服务的基本使用
+三MySQL数据类型
+
+一搭建数据库服务器
+服务器cpu  内容   存储
+操作系统的版本： W    L     U 
+装包：  源码     RPM    包的来源    软件的版本
+
+
+RDBMS   NoSQL（Redis Mongodb）
+主流数据库服务器软件：Oracle   DB2      （不开源，跨平台）
+                   MySQL    MariaDB  （开源，跨平台）  
+                   SQL SERVER        （不开源，也不跨平台）
+开源软件
+商业软件
+跨平台
+
+
+#scp mysql-5.7.17.tar 192.168.4.50:/root/
+#tar -xf mysql-5.7.17.tar
+#ls *.rpm
+#yum -y install perl-JSON
+# rpm -Uvh mysql-community-*.rpm
+# rpm -qa |grep -i mysql
+
+
+修改配置文件 /etc/my.cnf
+数据库目录  /var/lib/mysql
+启动服务
+# systemctl start mysqld
+# systemctl enable mysqld
+
+# ps -C mysqld  //查看进程
+# netstat -utnlp | grep :3306   //查看端口
+# ps aux |grep mysqld //查看详细进程	
+
+
+
+***************************************************************************************
+把数据库连接到数据库服务器上的过程
+1 连接数据库服务器 （命令连接 图形界面）
+#grep password /var/log/mysqld.log //初始密码存放位置#
+mysql -hlocalhost(主机ip或主机名) -u用户名 -p密码
+# mysql -hlocalhost  -uroot -p'l)q&evapP0?8'
+mysql> set global validate_password_policy=0; //只验证长度
+mysql> set global validate_password_length=6; //修改密码长度，默认值是8个字
+mysql> alter user root@"localhost" identified by "123456"; //修改秘密
+mysql> exit
+ls /var/lib/mysql/
+# mysql -uroot -p123456  //使用新密码登录
+配置永久生效
+vim /etc/my.cnf
+set global validate_password_policy=0;
+set global validate_password_length=6;
+2 选择库（文件夹）
+3 建表（文件）
+4 插入记录（行）
+RDBMS
+
+***************************************************************************************
+
+命令不区分大小写，密码除外
+– Show databases; // 显示已有的库
+– Use 库名 ;   // 切换库
+– Select database(); // 显示当前所在的库
+– Create database 库名 ; // 创建新库
+– Show tables;  // 显示已有的表
+– Drop database 库名; // 删除库
+
+数据库的命名规则
+– 可以使用数字 / 字母 / 下划线,但不能纯数字
+– 区分大小写,具有唯一性
+– 不可使用指令关键字、特殊字符
+
+
+mysql> use db1;          //切换库
+mysql> create table t1(        //创建表
+    -> name char(15),
+    -> class char(7)
+    -> );
+mysql> show tables;    //查看表
+mysql> desc t1;      //查看表结构
+mysql> select * from t1 ;   //查看表记录
+
+mysql> insert into t1 values("xgz","nsd1803"),("lhy","nsd1803"),("wsj","nsd1803");  //写入
+mysql> select * from t1;
+mysql> update t1 set class="nsd1809";    //修改class表的值，整一列
+mysql> delete  from t1;  //删除表内容
+mysql> drop table t1;   //删除表
+
+
+支持中文字符集：
+mysql> show create table t1  /查看字符值，建表命令
+
+create database 学生库；
+show databases;
+create table 学生信息表(
+姓名  char(15),
+班级  char(7)
+);
+
+default charset=utf8    //包含汉字字符集
+mysql> create table 学生信息表(姓名 char(15),班级 char(7))default charset=utf8;     //创建表
+mysql> show tables;     //查看表
+mysql> insert into 学生信息表 values("徐国璋","nsd1803"),("陈独秀","nsd1801"),("李大钊","nsd1809");  //添加表内容
+mysql> select * from 学生信息表;    //查看表内容
+
+数值类型
+
+tinyint类型：
+有符号：
+mysql> create table db1.t2(
+level tinyint         （取值范围-128～127）
+);
+mysql> insert into t2 values(127);
+
+无符号：
+mysql>create table db1.t3(
+level tinyint unsigned //无符号  （取值范围0～255）
+);
+mysql>insert into t3 values(255);
+
+
+浮点类型：
+float类型(单精度浮点型)：
+mysql> create table db1.t4(
+pay float(5,2)
+);
+mysql> insert into t4 values(900); 
+float(7,2)
+xxxxx.xx
+99999.99
+float(5,2)
+xxx.xx
+999.99	
+double类型(双精度浮点型) :
+
+
+字符类型：
+定长: char( 字符数 )    //默认宽度1
+– 最大长度 255 字符
+– 不够指定字符数时在右边用空格补齐
+– 字符数断超出时,无法写入数据
+
+变长: varchar( 字符数 )   //不写宽度会报错
+– 按数据实际大小分配存储空间
+– 字符数断超出时,无法写入数据。
+
+mysql> create table t5(        //创建表
+name char(15),
+email varchar(30)
+);
+
+mysql> insert into t5 values("bob","bob@163.com"),("xgz","xgz@qq.com");   //添加表内容
+
+
+***************************************************************************************************************
+
+日期时间类型：
+年   year    YYYY    2018
+日期  date   YYYYMM
+
+
+
+
+mysql> create table t7(                              //创建表
+name char(15),
+syrear year,                     
+brithday date,
+up_class time,
+party datetime
+);
+
+mysql> insert into t7 values("yaya",1990,20181120,083000,20180618213000);  //添加表内容
+
+
+
+
+
+
+
+
+
+***************************************************************************************************************
+
+枚举类型：
+enum(值1，值2，值N)    单选
+set(值1，值2，值N)   多选
+
+create table t6(
+name char(15),
+age tinyint unsigned,
+pay float(7,2),
+sex enum("boy","girl","no"),
+likes set("beauty","money","game","eat")
+)default charset=utf8;
+
+insert into t6 values("xgz",18,99999,"boy","beauty,eat");
+
+
+MySQL内置使时间函数的使用
+
+now() 获取系统当前日期和时间
+year() 执行时动态获得系统日期时间
+sleep(N) 休眠 N 秒
+curdate() 获取当前的系统日期
+curtime() 获取当前的系统时刻
+month() 获取指定时间中的月份
+date() 获取指定时间中的日期
+time() 获取指定时间中的时刻
+
+
+用法：
+
+mysql> select year(20170202); //获取时间年
+mysql> select date(20170202); //获取时间年月日
+insert into db1.t1 values($y,$w)
+
+使用时间函数获取数据给日期时间类型字段赋值
+mysql> select now();  //获取数据库当前系统时间
+mysql> select date(now()); //获取数据库当前系统时间年月日
+mysql> select curdate(); //获取数据库当前系统时间年月日
+mysql> select year(now()); //获取数据库当前系统时间年
+mysql> select month(now()); //获取数据库当前系统时间月
+mysql> select day(now());  //获取数据库当前系统日期
+mysql> select curtime();   //获取数据库当前系统时刻
+mysql> select time(now()); //获取数据库当前系统时刻
+datetime与timestamp的区别
+mysql> create table t8(
+name char(5),
+meetting datetime,
+party timestamp
+ );
+mysql> insert into t8 values("bob",now(),now());
+mysql> select * from t8;
+mysql> insert into t8(name,meetting) values("lucy",20150920214858);
+mysql> select * from t8;
+mysql> insert into t8(name,party) values("lyt",19961115214858);
+mysql> select * from t8;
+
+
+timestamp：没给时间，会自动获取当前系统的时间
+datetime：没给时间，为空NULL
+
+数据类型宽度数字符类型宽度的区别
+age int(2)
+name  char(2)
+
+create table t9 ( level int(1));
+mysql> insert into t9 values(1298);
+mysql> select * from t9;
+
+create table t10(level int(2));
+insert into t10 values(1298);
+mysql> select * from t10;
+
+create table t11(level int);  //不写宽度，默认11位数
+insert into t11 values(16298);
+mysql> select * from t11;
+
+create table t12(
+name char(15),
+level int(3) zerofill,      //默认用空格补位，zerofill使用0补位
+money int(5) zerofill
+);
+insert into t12 values("lty",18,39);
+insert into t12 values("zhu",8,390);
+insert into t12 values("ts",888,888888);
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+DBA_Day02
+字段约束条件
+mysql> desc  t12;   //查看，允许赋空值
+mysql> insert into t12 values(NULL,NULL,null);  //赋空值
+mysql> select * from t12;
+
+create table t13(
+name char(15) not null,      //默认值为空,not null取消默认值
+level int(3) zerofill default 0,      //默认用空格补位，zerofill使用0补位；默认值为空，default设置默认值为0
+money tinyint(2) zerofill default 0    //默认用空格补位，zerofill使用0补位；默认值为空，default设置默认值为0
+) ;
+mysql> insert into t13 values(NULL,null,null); //name不能为空，报错
+mysql> insert into t13 values("NULL",null,null); //不报错
+mysql> insert into t13(name) values("hz");
+
+mysql> create table t14(
+name char(15) not null default "",      
+level int(3) zerofill default 0,      
+money tinyint(2) zerofill default 0    
+) ;
+
+***********************************************************************************************************
+修改表结构
+添加新字段
+alter table t14
+add email varchar(30) default "stu@tedu.cn",
+add tell char(11);
+
+alter table t14
+add stu_id char(9) first;   //first添加到首位
+
+alter table t14
+add sex enum('boy','girl','no') default "no";
+after name;     //after name 添加到名字之后
+
+desc t14;
+select * from t14;
+
+
+修改字段
+alter table t14 modify name char(10) not null;    //修改name字符类型型 为char(10) ,不能为空值
+alter table t14 modify tel char(11) after name;   //调整位置，把tel调整到name后面
+
+
+
+
+mysql> alter table t14
+change email mail varchar(30) default "stu@tedu.cn";     //修改字段email为mail 
+mysql> desc t14;
+alter table t14 change mail Email varchar(50) default "stu@163.com";   //修改字段mail为Email
+desc t14;
+修改表名
+show tables;
+alter table t14 rename stuinfo;
+show tables;
+删除表中字段
+alter table t14 drop stu_id;         //删除一个，删除stu_id字段      
+alter table t14 drop stu_id,drop tel;  //删除两个，删除stu_id字段，删除tel字段
+
+
+
+MySQL键值
+普通索引  index
+唯一索引  unique
+主健      primary key 
+外键      foreign key
+全文索引  fulltext
+
+
+使用规则     创建      删除       查看  
+普通索引  index
+create table t16(
+name char(10),
+age int(2),
+class char(7),
+index(name),                     //为name添加普通索引
+inde(class)                      //为class添加普通索引
+);
+desc t16;
+drop index class on t16;   //删除class索引
+desc t16;
+show index from t16\G;  //查看详细信息
+create index class on t16(class);    //添加class索引
+desc t16;
+
+
+select * from t1 where name="zs";
+BTREE 二叉树算法
+
+*********************************************************************************************
+主健      primary key 
+
+• 注意事项
+– 一个表中只能有一个 primary key 字段
+– 对应的字段值不允许有重复,且不允许赋 NULL 值
+– 如果有多个字段都作为 PRIMARY KEY ,称为复合主
+键,必须一起创建。
+– 主键字段的 KEY 标志是 PRI
+– 通常与 AUTO_INCREMENT 连用
+– 经常把表中能够唯一标识记录的字段设置为主键字段
+[ 记录编号字段 ]
+
+
+
+create table t17(
+stu_id char(9) primary key, //创建主键
+name char(10)
+);
+
+insert into t17 values("nsd180301","tom");
+
+
+create table t18(
+stu_id char(9),
+name char(10),
+primary key(stu_id)
+);
+desc t18 ; desc t17;
+
+alter table t17 drop primary key;   //删除主键
+alter table t17 add primary key(stu_id);    //添加主键
+   
+delete from t17; //删除表内容
+
+复合主键
+
+create table t19(
+cip char(15),
+serport smallint(2),
+status enum("yes","no"),
+primary key(cip,serport)   //创建复合主键，只需要一个值不相同就可添加成功
+);
+
+insert into t19 values("2.1.1.1",22,"yes");
+insert into t19 values("2.1.1.1",21,"yes");
+insert into t19 values("1.1.1.1",21,"yes");
+
+
+alter table t19 drop primary key;    //删除主键
+alter table t19 add primary key(cip,serport);    //添加复合主键
+
+*******************************************************************************************************
+
+AUTO_INCREMENT 字段值自增长++
+
+create table t20(
+stu_id int(2) primary key auto_increment,
+name char(10),
+age tinyint(2)
+);
+
+insert into t20(name,age) values ("bob",19);
+insert into t20(name,age) values ("lyt",20);
+insert into t20(name,age) values ("xgz",21);
+insert into t20(stu_id,name,age) values (null,"nb",21);  //此时赋空值，auto_increment自增长会自动赋值，不会报错。
+
+
+
+
+mysql> alter table stuinfo
+add id int(2) primary key auto_increment
+first;
+
+
+*******************************************************************************************************
+外键      foreign key
+
+ 
+    
+create table gzb(
+字段列表,
+foreign key(gz_id) references ygb
+(yg_id) on update cascade
+on delete cascade
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
